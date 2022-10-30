@@ -5,13 +5,13 @@ using DG.Tweening;
 
 public class Page : MonoBehaviour
 {
-    public void OpenPage()
-    {
-        gameObject.SetActive(true);
-    }
-    
-    public void ClosePage()
-    {
-        gameObject.SetActive(false);
-    }
+	public void OpenPage()
+	{
+		gameObject.SetActive(true);
+	}
+
+	public void ClosePage()
+	{
+		gameObject.SetActive(false);
+	}
 }

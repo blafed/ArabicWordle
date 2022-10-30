@@ -4,16 +4,16 @@ using UnityEngine;
 
 public class RatingScript : MonoBehaviour
 {
-    public void RateUs()
-    {
-        Application.OpenURL("");
-    }
-    public void FeedBack()
-    {
-        Application.OpenURL("");
-    }
-    public void More()
-    {
-        Application.OpenURL("");
-    }
+	public void RateUs()
+	{
+		Application.OpenURL("");
+	}
+	public void FeedBack()
+	{
+		Application.OpenURL("");
+	}
+	public void More()
+	{
+		Application.OpenURL("");
+	}
 }
