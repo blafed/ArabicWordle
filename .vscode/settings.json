@@ -52,4 +52,7 @@
     "Temp/": true
   },
   "files.autoSave": "off",
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false
 }

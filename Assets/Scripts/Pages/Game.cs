@@ -5,6 +5,7 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using JetBrains.Annotations;
 
 public class Game : Page
 {
@@ -60,4 +61,8 @@ public class Game : Page
 
 		ChangeText();
 	}
+
+
+
+
 }

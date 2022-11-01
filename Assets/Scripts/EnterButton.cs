@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 using RTLTMPro;
 using TMPro;
-public class EnterButton : MonoBehaviour
+public class EnterButton : MonoBehaviour, IHighlightable
 {
 	private Button _button;
 	private Image _image;
@@ -57,4 +57,8 @@ public class EnterButton : MonoBehaviour
 		}
 		//_button.interactable = !incorrectWord;
 	}
+
+	Button IHighlightable.Button => _button;
+	UIElement IHighlightable.Element => UIElement.enter;
+	Image IHighlightable.Image => _button.image;
 }

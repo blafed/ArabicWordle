@@ -9,6 +9,9 @@ using UnityEngine.Events;
 using TMPro;
 using DG.Tweening;
 using Random = UnityEngine.Random;
+using JetBrains.Annotations;
+using UnityEditor.Profiling.Memory.Experimental;
+using RTLTMPro;
 
 public enum InGameState
 {
@@ -87,6 +90,8 @@ public class WordGuessManager : MonoBehaviour
 
 	private GameType gameType;
 
+	public string LastEnteredWord { get; private set; }
+
 	private void Awake()
 	{
 		foreach (Transform row in keyboardClassic.GetChild(0))
@@ -140,6 +145,7 @@ public class WordGuessManager : MonoBehaviour
 
 	private void Start()
 	{
+
 		GameManager.Instance.OnGameTypeSelected += OnGameTypeChanged;
 		//GameManager.Instance.OnNewDailyWord += ResetDaily;
 		Image[] images = wordGridClassic.GetComponentsInChildren<Image>();
@@ -199,6 +205,7 @@ public class WordGuessManager : MonoBehaviour
 
 	void GameWon()
 	{
+		if(!IsTutorial)
 		if (gameType == GameType.Classic)
 		{
 			GameManager.Instance.GamesWon++;
@@ -216,6 +223,8 @@ public class WordGuessManager : MonoBehaviour
 
 
 			PopupManager.Instance.OpenPopup((gameType == GameType.Classic) ? 1 : 4);
+			if (IsTutorial)
+				return;
 			GameManager.Instance.OnGameWon?.Invoke();
 			if ((gameType == GameType.Classic) && GameManager.Instance.GamesWon % GameManager.Instance.interstitialFreq == 0)
 			{
@@ -225,9 +234,16 @@ public class WordGuessManager : MonoBehaviour
 			{
 				AdsManager.Instance.ShowInterstitial();
 			}
-		};
+			else
+            if ((gameType == GameType.Classic) && GameManager.Instance.GamesWon % GameManager.Instance.askForReviewFreq == 0)
+            {
+				GameManager.Instance.AskForReview();
+            }
+        };
 		//print("ondailygame should be invoked");
 		//GameManager.Instance.OnDailyGamePlayed?.Invoke();
+		if (IsTutorial)
+			return;
 		coinsWon = (gameType == GameType.Classic) ? GameManager.Instance.coinsPerGame : GameManager.Instance.coinsPerGameDaily;
 		coinsDecrease = (gameType == GameType.Classic) ? GameManager.Instance.decreasePerRow : GameManager.Instance.decreasePerRowDaily;
 		GameManager.Instance.CoinsAvailable += coinsWon - coinsDecrease * rowIndex;
@@ -240,15 +256,20 @@ public class WordGuessManager : MonoBehaviour
 
 	void GameLost()
 	{
+
 		//GameManager.Instance.score = 0;
 		NotificationsManager.Instance.SpawnNotification(1).onComplete += () =>
 		{
 			PopupManager.Instance.OpenPopup((gameType == GameType.Classic) ? 2 : 5);
+
 			//GameManager.Instance.OnDailyGamePlayed?.Invoke();
+			if(!IsTutorial)
 			GameManager.Instance.OnGameLost?.Invoke();
 			if (gameType == GameType.Classic) GameManager.Instance.ResetScore();
 		};
-		AdsManager.Instance.ShowInterstitial();
+        if (IsTutorial)
+            return;
+        AdsManager.Instance.ShowInterstitial();
 		//PopupManager.Instance.OpenPopup(2);
 		//GameManager.Instance.OnGameLost?.Invoke();
 	}
@@ -265,6 +286,9 @@ public class WordGuessManager : MonoBehaviour
 
 	public void NewWord()
 	{
+		if (IsTutorial)
+			currentWord = tutorData.GoalWord;
+		else
 		// Single: Gives you the word set in the Inspector
 		if (wordMode == WordMode.single) currentWord = wordSingle;
 		// Array: Gives you a random word from the dictionary
@@ -307,6 +331,10 @@ public class WordGuessManager : MonoBehaviour
 		if (CurrentState == InGameState.Typing)
 		{
 			var eWord = (gameType == GameType.Classic) ? enteredWord : enteredWordDaily;
+			LastEnteredWord = eWord;
+
+			if (IsTutorial && tutorData.stage == Tutorial.Stage.AddLetter) tutorData.moveNext = true;
+
 			foreach (char c in str)
 			{
 				// Removes character from end of string
@@ -326,7 +354,8 @@ public class WordGuessManager : MonoBehaviour
 						wordErrorEvent.Invoke();
 						return;
 					}
-
+					if(IsTutorial && (tutorData.stage == Tutorial.Stage.AddWord || tutorData.stage == Tutorial.Stage.AddCorrectWord))  
+						tutorData.moveNext = true;
 					// Checks if word is in dictionary
 					// Check for word here
 					if (incorrectWord)
@@ -770,8 +799,232 @@ public class WordGuessManager : MonoBehaviour
 
 
 
+
+	#region TutorialMaker
+
+	[Header("Tutorial")]
+	public GameObject tutorialAlertGO;
+	public Image tutorAlertImage;
+	public RTLTextMeshPro tutorialAlertText;
+	public Button tutorialNextButton;
+	public bool IsTutorial { get; private set; }
+	Tutorial.Data tutorData;
+	void ShowTutorialAlert(string text)
+	{
+		tutorialAlertText.text = "";
+		var seq = DOTween.Sequence();
+		seq.Append(tutorialAlertText.DOText(text, 0.5f));
+		seq.onComplete += () =>
+		{
+			ShowTutorialNext();
+		};
+	}
+	void TutorialAlertColor(Color color)
+	{
+		var alpha = tutorAlertImage.color.a;
+		color.a = alpha;
+		tutorAlertImage.color = color;
+		if (color.grayscale < 0.5f)
+			tutorialAlertText.color = Color.white;
+	}
+	/// <summary>
+	/// Reset Alert color to default color
+	/// </summary>
+    void TutorialAlertColor()
+    {
+		TutorialAlertColor(Color.white);
+    }
+
+    public void BeginTutorial()
+    {
+	    tutorialNextButton.onClick.AddListener(() =>
+	    {
+		    tutorData.moveNext = true;
+		    HideTutorialNext();
+	    });
+		wordGuessedEvent.AddListener(EndTutorial);
+		wordNotGuessedEvent.AddListener(EndTutorial);
+        tutorialAlertGO.SetActive(true);
+		IsTutorial = true;
+		tutorData = new Tutorial.Data();
+		StartCoroutine(tutorData.coroutine =  TutorialRunning());
+	}
+	public void EndTutorial() {
+		tutorialNextButton.onClick.RemoveAllListeners();
+
+        wordGuessedEvent.RemoveListener(EndTutorial);
+        wordNotGuessedEvent.RemoveListener(EndTutorial);
+        tutorialAlertGO.SetActive(false);
+		IsTutorial = false;
+		StopCoroutine(tutorData.coroutine);
+		tutorData = null;
+	}
+
+	void ShowTutorialNext()
+	{
+		tutorialNextButton.gameObject.SetActive(true);
+		tutorialNextButton.transform.localScale = Vector3.zero;
+		DOTween.Sequence().Append(tutorialNextButton.transform.DOScale(Vector3.one, 0.5f));
+	}
+
+	void HideTutorialNext()
+	{
+		tutorialNextButton.gameObject.SetActive(false);
+	}
+
+	IEnumerator TutorialRunning()
+	{
+		tutorialNextButton.gameObject.SetActive(false);
+		tutorialAlertText.text = "";
+		tutorialAlertGO.transform.localScale = new Vector3(0, 1, 1);
+		yield return new WaitForSeconds(.5f);
+		DOTween.Sequence().Append(tutorialAlertGO.transform.DOScale(Vector3.one, 0.7f));
+		yield return new WaitForSeconds(1.5f);
+		yield return TutorialStage(Tutorial.Stage.Welcome);
+		yield return TutorialStage(Tutorial.Stage.GuessTheWord);
+		yield return TutorialStage(Tutorial.Stage.AddLetter, 0);
+        yield return TutorialStage(Tutorial.Stage.AddLetter, 1);
+        yield return TutorialStage(Tutorial.Stage.AddLetter, 2);
+        yield return TutorialStage(Tutorial.Stage.AddLetter, 3);
+        yield return TutorialStage(Tutorial.Stage.AddLetter, 4);
+        yield return TutorialStage(Tutorial.Stage.PressEnter);
+        yield return TutorialStage(Tutorial.Stage.LookToInWord);
+        yield return TutorialStage(Tutorial.Stage.LookToNotInWord);
+        yield return TutorialStage(Tutorial.Stage.LookToInPlace);
+        yield return TutorialStage(Tutorial.Stage.TryEliminate);
+        yield return TutorialStage(Tutorial.Stage.TryHint);
+        yield return TutorialStage(Tutorial.Stage.AddWord);
+        yield return TutorialStage(Tutorial.Stage.AddCorrectWord);
+	
+    }
+    IEnumerator TutorialCycle()
+	{
+		ShowTutorialAlert(Tutorial.Hints.Welcome);
+		yield return new WaitForSeconds(2f);
+		ShowTutorialAlert(Tutorial.Hints.FindHidden);
+		yield return new WaitForSeconds(3.5f);
+
+		while (tutorData != null)
+		{
+			string hintWord;
+			if (tutorData.lastWordResult.inPlace > 0)
+				ShowTutorialAlert(Tutorial.Hints.InPlace);
+			else if (tutorData.lastWordResult.inWord > 0)
+				ShowTutorialAlert(Tutorial.Hints.InWord);
+			else if (tutorData.lastWordResult.notInWord > 0)
+				ShowTutorialAlert(Tutorial.Hints.NotInWord);
+			else if (!string.IsNullOrEmpty(hintWord = tutorData.GetHintWord()))
+			{
+				if(tutorData.tries == 0)
+				ShowTutorialAlert(Tutorial.Hints.EnterRandom(hintWord));
+				else
+                    ShowTutorialAlert(Tutorial.Hints.Hint(hintWord));
+            }
+            else
+				ShowTutorialAlert(Tutorial.Hints.NoHintExist);
+
+			yield return new WaitUntil(tutorData.ShouldMoveNext);
+
+			tutorData.lastWordResult = tutorData.GetWordResult(LastEnteredWord);
+			tutorData.enteredWords.Add(LastEnteredWord);
+			tutorData.tries++;
+			foreach (var x in LastEnteredWord)
+				if (!tutorData.GoalWord.Contains(x) && !tutorData.notInWordLetters.Contains(x))
+					tutorData.notInWordLetters += x;
+		}
+	}
+
+	object TutorialStage(Tutorial.Stage stage, int index = 0)
+	{
+		
+		this.tutorData.stage = stage;
+		CustomYieldInstruction normalCoro = new WaitUntil(tutorData.ShouldMoveNext);
+        TutorialAlertColor();
+        HighlightManager.Instance.UnHihghlight();
+        tutorialNextButton.gameObject.SetActive(true);
+        switch (stage)
+        {
+	        case Tutorial.Stage.Welcome:
+		        HighlightManager.Instance.Highlight(0);
+		        ShowTutorialAlert(Tutorial.Hints.Welcome);
+		        break;
+
+	        case Tutorial.Stage.GuessTheWord:
+		        HighlightManager.Instance.Highlight(0);
+		        ShowTutorialAlert(Tutorial.Hints.Tut1);
+		        break;
+	        case Tutorial.Stage.AddLetter:
+		        var letter = tutorData.GoalWord[index];
+		        var letterCode = WordArray.LetterCode(letter.ToString());
+		        HighlightManager.Instance.Highlight(UIElement.letter + letterCode);
+		        tutorialNextButton.gameObject.SetActive(false);
+		        break;
+	        case Tutorial.Stage.PressEnter:
+		        HighlightManager.Instance.Highlight(UIElement.enter);
+		        tutorialNextButton.gameObject.SetActive(false);
+		        break;
+	        case Tutorial.Stage.LookToInPlace:
+		        ShowTutorialAlert(Tutorial.Hints.InPlace2);
+		        TutorialAlertColor(inPlaceColor);
+		        break;
+	        case Tutorial.Stage.LookToInWord:
+		        ShowTutorialAlert(Tutorial.Hints.InWord2);
+		        TutorialAlertColor(inWordColor);
+		        break;
+	        case Tutorial.Stage.LookToNotInWord:
+		        ShowTutorialAlert(Tutorial.Hints.NotInWord2);
+		        TutorialAlertColor(notInWordColor);
+		        break;
+	        case Tutorial.Stage.TryEliminate:
+		        ShowTutorialAlert(Tutorial.Hints.EliminateTool);
+		        HighlightManager.Instance.Highlight(UIElement.eliminate);
+		        tutorialNextButton.gameObject.SetActive(false);
+
+		        break;
+	        case Tutorial.Stage.TryHint:
+		        ShowTutorialAlert(Tutorial.Hints.HintTool);
+		        HighlightManager.Instance.Highlight(UIElement.hint);
+		        tutorialNextButton.gameObject.SetActive(false);
+
+		        break;
+	        case Tutorial.Stage.AddCorrectWord:
+		        ShowTutorialAlert(Tutorial.Hints.CorrectWord(tutorData.GoalWord));
+		        HighlightManager.Instance.HighlightKeyboard();
+		        tutorialNextButton.gameObject.SetActive(false);
+
+		        break;
+
+	        case Tutorial.Stage.AddWord:
+		        ShowTutorialAlert(Tutorial.Hints.EnterRandom(tutorData.GetHintWord()));
+		        HighlightManager.Instance.HighlightKeyboard();
+		        tutorialNextButton.gameObject.SetActive(false);
+
+		        break;
+
+        }
+
+        return normalCoro;
+	}
+
+
+    //public bool HighlightEliminate();
+    //public bool HighlightHints();
+    //public bool HighlightKeyboard();
+    //public bool HighlightRow(int rowIndex);
+    //public bool HighlightCell(int rowIndex, int columnIndex);
+    //   public bool HighlightEnter();
+    //public bool HighlightEliminate();
+    //public bool HighlightEliminate();
+    //public bool HighlightInWord();
+    //public bool HighlightInPlace();
+    //public bool HighlightNotInWord();
+
+    #endregion
+
+
+
 #if UNITY_EDITOR
-	private void OnValidate()
+    private void OnValidate()
 	{
 		if (!wordGrid) return;
 

@@ -640,6 +640,7 @@ PlayerSettings:
   webGLMemoryGeometricGrowthCap: 96
   scriptingDefineSymbols:
     Android: EnableNotificationsAndroid
+    Standalone: 
     iPhone: EnableNotificationsIos
   additionalCompilerArguments: {}
   platformArchitecture: {}

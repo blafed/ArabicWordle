@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34297841855e4e569d3bc490038cef45, type: 3}
+  m_Name: StagesConfig
+  m_EditorClassIdentifier: 
+  initialStage: 1
+  homeStage: 2
+  stages:
+  - code: 1
+    transition: 0
+    enterPrefabs: []
+    enterElements: 23000000
+    duration: 3
+    nextStage: 2
+  - code: 2
+    transition: 1
+    enterPrefabs: []
+    enterElements: 
+    duration: 3
+    nextStage: 0

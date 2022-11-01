@@ -1,0 +1,47 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Startup : MonoBehaviour
+{
+    [System.Serializable]
+    class Item
+    {
+        public MonoBehaviour manager;
+        [Header("Subs")]
+        public StartMode mode;
+        public List<Item> subs = new List<Item>();
+    }
+
+    enum StartMode
+    {
+        Series,
+        Parallel,
+    }
+
+    [SerializeField] private Item node;
+    void Start()
+    {
+        StartCoroutine(StartNode(node, true));
+    }
+
+    IEnumerator StartNode(Item node, bool wait)
+    {
+        if (node.manager)
+        {
+            node.manager.enabled = true;
+            if (wait)
+                yield return new WaitUntil(() => ((IInitializable) node).isInitialized);
+        }
+
+        foreach (var x in node.subs)
+        {
+            yield return StartNode(x, x.mode == StartMode.Series);
+        }
+    }
+}
+
+public interface IInitializable
+{
+    bool isInitialized { get; }
+}

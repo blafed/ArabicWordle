@@ -2,12 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
+using UnityEngine.UI;
 
 public class PagesManager : Singleton<PagesManager>
 {
 	public List<Page> pages = new List<Page>();
 	public Page currentPage;
 	public Page previousPage;
+	public List<IHighlightable> highlightables = new List<IHighlightable>();
 	// Start is called before the first frame update
 
 	void Start()
@@ -20,7 +22,6 @@ public class PagesManager : Singleton<PagesManager>
 	// Update is called once per frame
 	void Update()
 	{
-
 	}
 
 	public void FlipPage(Page page)
@@ -58,4 +59,9 @@ public class PagesManager : Singleton<PagesManager>
 		}
 		FlipPage(currentPage != pages[1] ? previousPage : pages[0]);
 	}
+	
+	public const int MenuPage = 0, 
+		GamePage = 1;
+
 }
+

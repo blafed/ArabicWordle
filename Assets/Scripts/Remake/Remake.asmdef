@@ -1,0 +1,19 @@
+{
+    "name": "Remake",
+    "rootNamespace": "",
+    "references": [
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:1fbc052e3ea2ff24b8874f1cedb59b6c",
+        "GUID:ff6de30450f3748908ff580f6ec64d9a",
+        "GUID:292352a6b5b8c9e41881e15e70aede9e"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

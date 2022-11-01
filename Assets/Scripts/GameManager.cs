@@ -6,6 +6,7 @@ using UnityEngine.Advertisements;
 using UnityEngine.Events;
 using Random = UnityEngine.Random;
 using UnityEngine.UI;
+using GleyRateGame;
 
 public enum GameType
 {
@@ -37,6 +38,7 @@ public class GameManager : Singleton<GameManager>, IStateManageable
 	public UnityAction OnGameLost;
 	public UnityAction OnItemBought;
 	public UnityAction OnTextChanged;
+	public UnityAction OnStateChanged;
 
 	//Player Properties
 	private int coins;
@@ -44,6 +46,7 @@ public class GameManager : Singleton<GameManager>, IStateManageable
 	private int eliminations;
 
 	public int interstitialFreq = 2;
+	public int askForReviewFreq = 6;
 	public int GamesWon { get; set; }
 
 	public int CoinsAvailable
@@ -94,10 +97,12 @@ public class GameManager : Singleton<GameManager>, IStateManageable
 	public int eliminationLimit = 3;
 	[HideInInspector] public int timesEliminationUsed = 0;
 
+    public bool ShouldBeginTutorial { get; set; } = true;
+	public bool IsTutorial => this.wordGuessManager.IsTutorial;
 
 
 
-	public Dictionary<string, BaseState> States { get; } = new Dictionary<string, BaseState>()
+    public Dictionary<string, BaseState> States { get; } = new Dictionary<string, BaseState>()
 	{
 		{"intro", new IntroState()},
 		{"menu", new MenuState()},
@@ -148,6 +153,9 @@ public class GameManager : Singleton<GameManager>, IStateManageable
 				PlayerPrefs.SetInt("Day", DateTime.UtcNow.Day);
 				PlayerPrefs.SetInt("DailyButton", 1);
 				PlayerPrefs.SetInt("Ads", 1);
+			}
+			else
+			{
 			}
 			CoinsAvailable = PlayerPrefs.GetInt("Coins");
 			HintsAvailable = PlayerPrefs.GetInt("Hints");
@@ -253,13 +261,15 @@ public class GameManager : Singleton<GameManager>, IStateManageable
 		CurrentState?.ExitState(this);
 		CurrentState = state;
 		CurrentState.EnterState(this);
+		OnStateChanged?.Invoke();
 	}
 
 	public void SwitchState(string state)
 	{
-		CurrentState?.ExitState(this);
-		CurrentState = States[state];
-		CurrentState.EnterState(this);
+		SwitchState(States[state]);
+		//CurrentState?.ExitState(this);
+		//CurrentState = States[state];
+		//CurrentState.EnterState(this);
 	}
 
 	public void SetGameType(GameType type)
@@ -290,5 +300,10 @@ public class GameManager : Singleton<GameManager>, IStateManageable
 	{
 		PlayerPrefs.SetInt("Ads", 0);
 		AdsManager.Instance.HideBanner();
+	}
+
+	public void AskForReview()
+	{
+		RateGame.Instance.ShowRatePopup();
 	}
 }

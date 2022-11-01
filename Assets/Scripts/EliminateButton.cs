@@ -6,7 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class EliminateButton : MonoBehaviour
+public class EliminateButton : MonoBehaviour, IHighlightable
 {
 	public TextMeshProUGUI countText;
 	private Button button;
@@ -22,6 +22,9 @@ public class EliminateButton : MonoBehaviour
 
 	private bool limitReached;
 
+	public Button Button => button;
+	public Image Image => button.image;
+
 	void Awake()
 	{
 		button = GetComponent<Button>();
@@ -31,7 +34,9 @@ public class EliminateButton : MonoBehaviour
 	// Start is called before the first frame update
 	void Start()
 	{
-		SetCounter();
+        PagesManager.Instance.highlightables.Add(this);
+
+        SetCounter();
 		wordGuessManager = GameManager.Instance.wordGuessManager;
 		keyboard = wordGuessManager.KeyboardButtons;
 		GameManager.Instance.OnNewWord += ResetButton;
@@ -47,8 +52,11 @@ public class EliminateButton : MonoBehaviour
 	public void SetCounter()
 	{
 		int endValue = GameManager.Instance.EliminationsAvailable;
-		countText.DOText(endValue.ToString(), 0.25f);
-		button.GetComponent<Image>().sprite = (endValue == 0 || limitReached) ? inactiveSprite : activeSprite;
+		if (GameManager.Instance.IsTutorial)
+			countText.DOText(endValue.ToString(), 0.25f);
+		else
+			countText.text = "";
+        button.GetComponent<Image>().sprite = (endValue == 0 || limitReached) ? inactiveSprite : activeSprite;
 	}
 
 	void SetText()
@@ -63,18 +71,21 @@ public class EliminateButton : MonoBehaviour
 		int index = 0;
 		List<string> keys = keyboard.Keys.ToList();
 
-		if (GameManager.Instance.EliminationsAvailable >= 0 && limitReached)
+		if (!GameManager.Instance.IsTutorial)
 		{
-			NotificationsManager.Instance.SpawnMessage(0);
-			return;
-		}
+			if (GameManager.Instance.EliminationsAvailable >= 0 && limitReached)
+			{
+				NotificationsManager.Instance.SpawnMessage(0);
+				return;
+			}
 
-		if ((!GameManager.Instance.devMode && GameManager.Instance.EliminationsAvailable <= 0))
-		{
-			//PopupManager.Instance.OpenPopup(3);
-			PagesManager.Instance.FlipPage(2);
-			GameManager.Instance.SwitchState("store");
-			return;
+			if ((!GameManager.Instance.devMode && GameManager.Instance.EliminationsAvailable <= 0))
+			{
+				//PopupManager.Instance.OpenPopup(3);
+				PagesManager.Instance.FlipPage(2);
+				GameManager.Instance.SwitchState("store");
+				return;
+			}
 		}
 
 		if (wordGuessManager.EliminationCount + numberOfLetters + 5 >= keys.Count)
@@ -100,14 +111,17 @@ public class EliminateButton : MonoBehaviour
 				}
 			}
 		}
-		GameManager.Instance.EliminationsAvailable--;
-		GameManager.Instance.timesEliminationUsed++;
-
-		SetCounter();
-		if (GameManager.Instance.timesEliminationUsed >= GameManager.Instance.eliminationLimit)
+		if (!GameManager.Instance.IsTutorial)
 		{
-			limitReached = true;
-			button.GetComponent<Image>().sprite = inactiveSprite;
+			GameManager.Instance.EliminationsAvailable--;
+			GameManager.Instance.timesEliminationUsed++;
+
+			SetCounter();
+			if (GameManager.Instance.timesEliminationUsed >= GameManager.Instance.eliminationLimit)
+			{
+				limitReached = true;
+				button.GetComponent<Image>().sprite = inactiveSprite;
+			}
 		}
 	}
 
@@ -127,4 +141,8 @@ public class EliminateButton : MonoBehaviour
 		seq.Append(arrow.GetComponent<Image>().DOFade(0, 0.25f));
 		seq.onComplete += () => Destroy(arrow);
 	}
+
+
+
+    UIElement IHighlightable.Element => UIElement.eliminate;
 }

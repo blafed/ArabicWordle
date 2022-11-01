@@ -7,9 +7,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Random = UnityEngine.Random;
-using DG.Tweening;
 
-public class HintButton : MonoBehaviour
+public class HintButton : MonoBehaviour, IHighlightable
 {
 	public TextMeshProUGUI countText;
 	private Button button;
@@ -19,15 +18,27 @@ public class HintButton : MonoBehaviour
 
 	private bool limitReached;
 
+
+	public Button Button => button;
+	public Image Image => Button.image;
+	public Color DefaultColor { get; }
+	public UIElement Element => UIElement.hint;
+
+	private Color defaultColor;
+
+
 	// Start is called before the first frame update
 	void Awake()
 	{
 		button = GetComponent<Button>();
+		defaultColor = Image.color;
 	}
 
 	private void Start()
 	{
-		SetCounter();
+        PagesManager.Instance.highlightables.Add(this);
+
+        SetCounter();
 		wordGuessManager = GameManager.Instance.wordGuessManager;
 		//countText.text = GameManager.Instance.HintsAvailable.ToString();
 		GameManager.Instance.OnNewWord += ResetButton;
@@ -49,7 +60,10 @@ public class HintButton : MonoBehaviour
 	public void SetCounter()
 	{
 		int endValue = GameManager.Instance.HintsAvailable;
-		countText.DOText(endValue.ToString(), 0.25f);
+        if (GameManager.Instance.IsTutorial)
+            countText.DOText(endValue.ToString(), 0.25f);
+        else
+            countText.text = "";
 		button.GetComponent<Image>().sprite = (endValue == 0 || limitReached) ? inactiveSprite : activeSprite;
 	}
 
@@ -66,13 +80,14 @@ public class HintButton : MonoBehaviour
 			return;
 		}
 
-		if ((!GameManager.Instance.devMode && GameManager.Instance.HintsAvailable <= 0))
-		{
-			//PopupManager.Instance.OpenPopup(3);
-			PagesManager.Instance.FlipPage(2);
-			GameManager.Instance.SwitchState("store");
-			return;
-		}
+		if (!GameManager.Instance.IsTutorial)
+			if ((!GameManager.Instance.devMode && GameManager.Instance.HintsAvailable <= 0))
+			{
+				//PopupManager.Instance.OpenPopup(3);
+				PagesManager.Instance.FlipPage(2);
+				GameManager.Instance.SwitchState("store");
+				return;
+			}
 
 
 
@@ -118,11 +133,15 @@ public class HintButton : MonoBehaviour
 		GameManager.Instance.HintsAvailable--;
 		SetCounter();
 		wordGuessManager.hintCalled = true;
-		GameManager.Instance.timesHintUsed++;
-		if (GameManager.Instance.timesHintUsed >= GameManager.Instance.hintLimit)
+
+		if (!GameManager.Instance.IsTutorial)
 		{
-			limitReached = true;
-			button.GetComponent<Image>().sprite = inactiveSprite;
+			GameManager.Instance.timesHintUsed++;
+			if (GameManager.Instance.timesHintUsed >= GameManager.Instance.hintLimit)
+			{
+				limitReached = true;
+				button.GetComponent<Image>().sprite = inactiveSprite;
+			}
 		}
 	}
 }

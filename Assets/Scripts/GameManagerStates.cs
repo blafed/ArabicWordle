@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
 
 public class IntroState : BaseState
@@ -38,7 +39,21 @@ public class MenuState : BaseState
 	{
 		if (!SoundManager.Instance.musicSource.isPlaying)
 			SoundManager.Instance.PlayMusic(0);
-	}
+		if (GameManager.Instance.wordGuessManager.IsTutorial)
+		{
+			GameManager.Instance.wordGuessManager.EndTutorial();
+		}
+		if (GameManager.Instance.ShouldBeginTutorial)
+		{
+			Debug.Log("Starting Tutorial");
+            GameManager.Instance.wordGuessManager.BeginTutorial();
+            PagesManager.Instance.FlipPage(PagesManager.GamePage);
+            GameManager.Instance.SetGameType(GameType.Classic);
+            GameManager.Instance.SwitchState("game");
+            GameManager.Instance.ShouldBeginTutorial = false;
+
+        }
+    }
 
 	public override void UpdateState(IStateManageable stateManager)
 	{

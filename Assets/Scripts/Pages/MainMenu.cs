@@ -55,6 +55,14 @@ public class MainMenu : Page
 		playDailyButton.interactable = PlayerPrefs.GetInt("DailyButton") == 1;
 		check.gameObject.SetActive(PlayerPrefs.GetInt("DailyButton") == 0);
 	}
+	public void PlayTuroial()
+    {
+		PopupManager.Instance.CloseCurrentPopup();
+        GameManager.Instance.wordGuessManager.BeginTutorial();
+        GameManager.Instance.SetGameType(GameType.Classic);
+        GameManager.Instance.SwitchState("game");
+
+    }
 	private void OnEnable()
 	{
 		highScore.text = GameManager.Instance.highScore.ToString();

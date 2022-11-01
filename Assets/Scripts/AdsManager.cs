@@ -18,7 +18,7 @@ public class AdsManager : Singleton<AdsManager>, IUnityAdsInitializationListener
 	public string bannerPlacementIdI = "Banner_iOS";
 	public string interstitialPlacementIdI = "Interstitial_iOS";
 	public string rewardedPlacementIdI = "Rewarded_iOS";
-
+	
 	public bool isTestMode = true;
 
 	private IUnityAdsInitializationListener unityAdsInitializationListenerImplementation;
